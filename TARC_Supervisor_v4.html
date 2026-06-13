@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TARC — Supervisor DPR</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e8e6e0;font-size:15px;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+.screen{display:none;min-height:100vh;padding-bottom:60px}
+.screen.active{display:block}
+/* TOPBAR */
+.topbar{background:#161a24;border-bottom:1px solid #252836;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;background:#c8922a;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;flex-shrink:0}
+.brand-text{font-size:15px;font-weight:700;color:#fff}
+.brand-sub{font-size:11px;color:#6b7280;margin-top:1px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.back-btn{background:#1e2230;border:1px solid #2a2d3a;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:500;color:#9ca3af}
+/* HOME */
+.home-header{text-align:center;padding:36px 20px 28px}
+.home-header h1{font-size:28px;font-weight:900;color:#fff;margin-bottom:6px}
+.home-header p{font-size:14px;color:#6b7280}
+.date-badge{display:inline-flex;align-items:center;gap:6px;background:#1e2230;border:1px solid #2a2d3a;border-radius:20px;padding:6px 16px;font-size:12px;color:#9ca3af;margin-top:10px}
+.sup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;padding:0 16px;max-width:920px;margin:0 auto 32px}
+.sup-card{background:#161a24;border:1.5px solid #252836;border-radius:16px;padding:20px 12px 16px;text-align:center;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.sup-card:hover{border-color:#c8922a;transform:translateY(-2px)}
+.sup-card:active{transform:scale(.97)}
+.sup-card.blocked{opacity:.35;pointer-events:none}
+.sup-av{width:72px;height:72px;border-radius:50%;margin:0 auto 12px;background:#252836;border:3px solid #2a2d3a;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#c8922a}
+.sup-av img{width:100%;height:100%;object-fit:cover}
+.sup-nm{font-size:13px;font-weight:700;color:#e8e6e0;line-height:1.3}
+.sup-rl{font-size:10px;color:#6b7280;margin-top:3px}
+.done-badge{position:absolute;top:9px;right:9px;background:#16a34a;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:#fff}
+/* PIN */
+.pin-center{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px)}
+.pin-wrap{text-align:center;padding:40px 24px;max-width:320px;margin:0 auto;width:100%}
+.pin-av{width:80px;height:80px;border-radius:50%;margin:0 auto 14px;background:#252836;border:3px solid #c8922a;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#c8922a}
+.pin-av img{width:100%;height:100%;object-fit:cover}
+.pin-nm{font-size:20px;font-weight:800;color:#fff;margin-bottom:4px}
+.pin-hint{font-size:13px;color:#6b7280;margin-bottom:24px}
+.dots{display:flex;gap:14px;justify-content:center;margin-bottom:28px}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid #2a2d3a;transition:all .15s}
+.dot.on{background:#c8922a;border-color:#c8922a;transform:scale(1.1)}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto}
+.pkey{background:#161a24;border:1px solid #252836;border-radius:13px;padding:17px;font-size:22px;font-weight:600;color:#fff;transition:all .1s}
+.pkey:active{background:#252836;transform:scale(.94)}
+.pkey.del{font-size:17px;color:#9ca3af}
+.pin-err{color:#ef4444;font-size:13px;margin-top:12px;min-height:20px}
+/* PROJECT */
+.sw{max-width:720px;margin:0 auto;padding:24px 16px}
+.sec-t{font-size:19px;font-weight:800;color:#fff;margin-bottom:4px}
+.sec-s{font-size:13px;color:#6b7280;margin-bottom:20px}
+.proj-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:480px){.proj-grid{grid-template-columns:1fr}}
+.proj-card{background:#161a24;border:2px solid #252836;border-radius:14px;padding:16px 18px;cursor:pointer;transition:all .15s;position:relative}
+.proj-card:hover{border-color:#c8922a;background:#1a1f2e}
+.proj-card:active{transform:scale(.98)}
+.proj-card.recent::after{content:'Recent';position:absolute;top:9px;right:9px;background:#c8922a;color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px}
+.proj-nm{font-size:13px;font-weight:600;color:#e8e6e0;line-height:1.45}
+/* DPR TABS */
+.tabrow{display:flex;background:#161a24;border:1px solid #252836;border-radius:13px;padding:4px;margin-bottom:18px}
+.tabbtn{flex:1;padding:11px;border-radius:10px;border:none;background:transparent;font-size:14px;font-weight:700;color:#6b7280;transition:all .15s}
+.tabbtn.on{background:#c8922a;color:#fff}
+/* MACHINES */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#9ca3af}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+.mc{background:#161a24;border:2px solid #252836;border-radius:14px;padding:13px;cursor:pointer;transition:all .15s;text-align:center}
+.mc:hover{border-color:#3a3d4a}
+.mc.sel{border-color:#16a34a;background:#0d1f14}
+.mc.taken{opacity:.5;pointer-events:none}
+.mc.breakdown{border-color:#ef4444;background:#1a0505;pointer-events:none}
+.mc.standby{border-color:#d97706;background:#1a1200;pointer-events:none}
+.mc-photo{width:58px;height:48px;background:#252836;border-radius:8px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
+.mc-photo img{width:100%;height:100%;object-fit:cover}
+.mc-nm{font-size:11px;font-weight:700;color:#e8e6e0;line-height:1.35}
+.mc-pl{font-size:10px;color:#6b7280;margin-top:2px;font-family:monospace}
+.mc-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;margin:5px auto 0;display:inline-block}
+.b-grn{background:#14532d;color:#86efac}
+.b-gry{background:#374151;color:#9ca3af}
+.b-red{background:#450a0a;color:#fca5a5;border:1px solid #ef4444}
+.b-yel{background:#451a03;color:#fcd34d;border:1px solid #d97706}
+.fuel-row{display:flex;align-items:center;gap:5px;margin-top:8px;background:#0f1117;border-radius:8px;padding:5px 9px}
+.fuel-row label{font-size:10px;color:#6b7280;white-space:nowrap}
+.fuel-inp{flex:1;background:transparent;border:none;color:#fff;font-size:13px;font-weight:700;min-width:0;padding:0;text-align:right}
+.fuel-inp:focus{outline:none;color:#c8922a}
+.fuel-unit{font-size:10px;color:#6b7280}
+/* LABOUR */
+.hrs-bar{display:flex;align-items:center;gap:10px;background:#161a24;border:1px solid #252836;border-radius:11px;padding:12px 15px;margin-bottom:14px}
+.hrs-bar label{font-size:13px;color:#9ca3af;flex:1}
+.h-inp{width:64px;background:#0f1117;border:1px solid #252836;border-radius:8px;padding:7px;color:#fff;font-size:16px;font-weight:700;text-align:center}
+.lab-srch{width:100%;background:#161a24;border:1px solid #252836;border-radius:11px;padding:10px 15px;color:#fff;font-size:14px;margin-bottom:12px}
+.lab-srch::placeholder{color:#4b5563}
+.lab-srch:focus{outline:none;border-color:#c8922a}
+.cat-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;padding:10px 0 6px;border-bottom:1px solid #1e2230;margin-bottom:8px}
+.lrow{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:#161a24;border-radius:11px;margin-bottom:6px;border:1.5px solid #1e2230}
+.lrow.present{border-color:#16a34a;background:#0a1a0e}
+.lrow.absent{border-color:#dc2626;background:#180808}
+.lrow.halfday{border-color:#d97706;background:#180f00}
+.lrow.leave{border-color:#3b82f6;background:#070e1c}
+.lnm{font-size:13px;font-weight:700;color:#e8e6e0}
+.lde{font-size:10px;color:#6b7280;margin-top:1px}
+.lrt{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.sbts{display:flex;gap:4px}
+.sbt{padding:5px 9px;border-radius:7px;border:1px solid #252836;background:#0f1117;font-size:11px;font-weight:700;color:#6b7280;white-space:nowrap}
+.sbt:active{transform:scale(.94)}
+.sbt.p{background:#16a34a;border-color:#16a34a;color:#fff}
+.sbt.a{background:#dc2626;border-color:#dc2626;color:#fff}
+.sbt.h{background:#d97706;border-color:#d97706;color:#fff}
+.sbt.l{background:#3b82f6;border-color:#3b82f6;color:#fff}
+.hrs-row{display:flex;align-items:center;gap:5px}
+.hrs-row span{font-size:11px;color:#6b7280}
+.hrs-row input{width:54px;background:#0f1117;border:1px solid #252836;border-radius:7px;padding:4px 6px;color:#fff;font-size:14px;font-weight:700;text-align:center}
+.lv-dates{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+.lv-f{display:flex;flex-direction:column;gap:2px}
+.lv-f span{font-size:9px;color:#6b7280}
+.lv-f input{background:#161a24;border:1px solid #252836;border-radius:6px;padding:4px 7px;color:#fff;font-size:11px;width:130px}
+/* MATERIALS */
+.mat-row{display:flex;gap:7px;align-items:center;background:#161a24;border:1px solid #252836;border-radius:11px;padding:9px 12px;margin-bottom:8px;flex-wrap:wrap}
+.mat-sel{flex:1;min-width:160px;background:#0f1117;border:1px solid #252836;border-radius:8px;padding:8px;color:#fff;font-size:13px}
+.mat-num{width:80px;background:#0f1117;border:1px solid #252836;border-radius:8px;padding:8px;color:#fff;font-size:13px;text-align:center}
+.mat-unit{width:72px;background:#0f1117;border:1px solid #252836;border-radius:8px;padding:8px;color:#fff;font-size:12px}
+.mat-dt{background:#0f1117;border:1px solid #252836;border-radius:8px;padding:8px;color:#fff;font-size:12px;width:136px}
+.mat-rm{background:transparent;border:none;color:#6b7280;font-size:20px;padding:0 4px;cursor:pointer}
+.add-mat-btn{width:100%;background:#161a24;border:1.5px dashed #2a2d3a;border-radius:11px;padding:11px;font-size:13px;color:#6b7280;margin-bottom:16px;transition:all .15s;cursor:pointer}
+.add-mat-btn:hover{border-color:#c8922a;color:#c8922a}
+.rem-ta{width:100%;background:#161a24;border:1px solid #252836;border-radius:11px;padding:12px;color:#fff;font-size:14px;resize:vertical;min-height:80px}
+.rem-ta:focus{outline:none;border-color:#c8922a}
+.sub-btn{width:100%;background:#c8922a;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:800;color:#fff;margin-top:20px;cursor:pointer}
+.sub-btn:hover{background:#b07a22}
+.sub-btn:active{transform:scale(.98)}
+.sub-btn:disabled{background:#252836;color:#4b5563;cursor:not-allowed}
+.locked-box{background:#1a0f00;border:1px solid #d97706;border-radius:12px;padding:14px 18px;color:#d97706;font-size:14px;font-weight:700;text-align:center;margin-bottom:16px;display:none}
+.divider{height:1px;background:#1e2230;margin:20px 0}
+.sec-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:10px}
+.empty{text-align:center;padding:40px 20px;color:#4b5563;font-size:13px}
+/* OVERLAY */
+.overlay{position:fixed;inset:0;background:#0f1117;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .4s}
+.overlay.hide{opacity:0;pointer-events:none}
+.spinner{width:40px;height:40px;border:3px solid #252836;border-top-color:#c8922a;border-radius:50%;animation:spin .7s linear infinite;margin-bottom:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov-msg{font-size:14px;color:#6b7280}
+.saving{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#161a24;border:1px solid #252836;border-radius:10px;padding:8px 18px;font-size:12px;color:#9ca3af;display:none;z-index:100;align-items:center;gap:8px}
+.saving.show{display:flex}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="ov-msg" id="ov-msg">Connecting to server…</div>
+</div>
+<div class="saving" id="saving">
+  <div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div>
+  Saving…
+</div>
+
+<!-- SCREEN: HOME -->
+<div id="s-home" class="screen active">
+  <div class="home-header">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
+      <div class="logo">T</div>
+      <span style="font-size:20px;font-weight:900;color:#fff">TARC</span>
+    </div>
+    <h1>Daily Progress Report</h1>
+    <p>Select your name to begin</p>
+    <div class="date-badge">📅 <span id="home-date"></span></div>
+  </div>
+  <div class="sup-grid" id="sup-grid">
+    <div class="empty">Loading supervisors…</div>
+  </div>
+</div>
+
+<!-- SCREEN: PIN -->
+<div id="s-pin" class="screen">
+  <div class="topbar">
+    <div class="brand"><div class="logo">T</div><div><div class="brand-text">Enter PIN</div></div></div>
+    <button class="back-btn" onclick="goTo('s-home')">← Back</button>
+  </div>
+  <div class="pin-center">
+    <div class="pin-wrap">
+      <div class="pin-av" id="pin-av"></div>
+      <div class="pin-nm" id="pin-nm"></div>
+      <div class="pin-hint">Enter your 4-digit PIN</div>
+      <div class="dots">
+        <div class="dot" id="d0"></div><div class="dot" id="d1"></div>
+        <div class="dot" id="d2"></div><div class="dot" id="d3"></div>
+      </div>
+      <div class="pinpad">
+        <button class="pkey" onclick="pinKey('1')">1</button>
+        <button class="pkey" onclick="pinKey('2')">2</button>
+        <button class="pkey" onclick="pinKey('3')">3</button>
+        <button class="pkey" onclick="pinKey('4')">4</button>
+        <button class="pkey" onclick="pinKey('5')">5</button>
+        <button class="pkey" onclick="pinKey('6')">6</button>
+        <button class="pkey" onclick="pinKey('7')">7</button>
+        <button class="pkey" onclick="pinKey('8')">8</button>
+        <button class="pkey" onclick="pinKey('9')">9</button>
+        <button class="pkey" onclick="pinKey('0')">0</button>
+        <button class="pkey del" onclick="pinDel()">⌫</button>
+        <div></div>
+      </div>
+      <div class="pin-err" id="pin-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: PROJECT -->
+<div id="s-project" class="screen">
+  <div class="topbar">
+    <div class="brand"><div class="logo">T</div><div><div class="brand-text" id="proj-supnm"></div><div class="brand-sub">Select project for today</div></div></div>
+    <button class="back-btn" onclick="goTo('s-home')">← Exit</button>
+  </div>
+  <div class="sw">
+    <div class="sec-t">Which project today?</div>
+    <div class="sec-s">Your most recent project appears first.</div>
+    <div class="proj-grid" id="proj-grid"></div>
+  </div>
+</div>
+
+<!-- SCREEN: DPR -->
+<div id="s-dpr" class="screen">
+  <div class="topbar">
+    <div class="brand"><div class="logo">T</div><div><div class="brand-text" id="dpr-nm"></div><div class="brand-sub" id="dpr-proj"></div></div></div>
+    <button class="back-btn" onclick="goTo('s-project')">← Back</button>
+  </div>
+  <div class="sw">
+    <div id="locked-box" class="locked-box">🔒 Submitted &amp; locked. Contact admin to unlock.</div>
+    <div class="tabrow">
+      <button class="tabbtn on" id="tb-mach" onclick="swTab('mach')">⚙ Vehicles &amp; Machines</button>
+      <button class="tabbtn" id="tb-lab" onclick="swTab('lab')">👷 Labour / Staff</button>
+    </div>
+
+    <!-- MACHINES TAB -->
+    <div id="tc-mach">
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:#16a34a"></div>Available</div>
+        <div class="leg"><div class="leg-dot" style="background:#374151"></div>Taken</div>
+        <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>Breakdown</div>
+        <div class="leg"><div class="leg-dot" style="background:#d97706"></div>Standby</div>
+      </div>
+      <div class="mach-grid" id="mach-grid"></div>
+    </div>
+
+    <!-- LABOUR TAB -->
+    <div id="tc-lab" style="display:none">
+      <div class="hrs-bar">
+        <label>Default hours for all present staff</label>
+        <input type="number" class="h-inp" id="def-hrs" value="10" min="1" max="24" onchange="applyDefHrs()">
+        <span style="font-size:13px;color:#6b7280">hrs</span>
+      </div>
+      <input class="lab-srch" id="lab-srch" placeholder="Search name…" oninput="renderLabour()">
+      <div id="lab-list"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sec-lbl">Materials Received (optional)</div>
+    <div id="mat-rows"></div>
+    <button class="add-mat-btn" onclick="addMat()">+ Add material</button>
+    <div class="divider"></div>
+    <div class="sec-lbl">Remarks / Notes</div>
+    <textarea class="rem-ta" id="remarks" placeholder="Any issues, delays, instructions…"></textarea>
+    <button class="sub-btn" id="sub-btn" onclick="submitDPR()">Submit &amp; Lock DPR →</button>
+  </div>
+</div>
+
+<!-- FIREBASE COMPAT SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ── FIREBASE ──
+firebase.initializeApp({
+  apiKey:"AIzaSyD_aksuR_tv6NW_a5M1Fey0--msjtvf7Jw",
+  authDomain:"dpr-trc.firebaseapp.com",
+  projectId:"dpr-trc",
+  storageBucket:"dpr-trc.firebasestorage.app",
+  messagingSenderId:"45402440109",
+  appId:"1:45402440109:web:46416340c2e0e8d7f42124"
+});
+var db = firebase.firestore();
+
+// ── DEFAULTS ──
+var D_SUPS=[{id:'sup1',name:'Raja Yasir',role:'Site Supervisor',pin:'1111',photo:'',blocked:false},{id:'sup2',name:'Muhib Zafar',role:'Site Supervisor',pin:'2222',photo:'',blocked:false},{id:'sup3',name:'Rustam Malik',role:'Site Supervisor',pin:'3333',photo:'',blocked:false},{id:'sup4',name:'Nasir Bazmi',role:'Site Supervisor',pin:'4444',photo:'',blocked:false},{id:'sup5',name:'Munir Ahmed',role:'HR/Admin',pin:'5555',photo:'',blocked:false},{id:'sup6',name:'Wajid',role:'Site Engineer',pin:'6666',photo:'',blocked:false},{id:'sup7',name:'Mubashir',role:'Site Incharge',pin:'7777',photo:'',blocked:false},{id:'sup8',name:'Khalil',role:'Mechanic Supervisor',pin:'8888',photo:'',blocked:false},{id:'sup9',name:'Sufyan Qadri',role:'Purchaser',pin:'9999',photo:'',blocked:false},{id:'sup10',name:'Luqman',role:'Driver',pin:'1234',photo:'',blocked:false},{id:'sup11',name:'Shahbaz',role:'Driver',pin:'2345',photo:'',blocked:false},{id:'sup12',name:'Mudasir',role:'Operator',pin:'3456',photo:'',blocked:false},{id:'sup13',name:'Mubarak',role:'Surveyor',pin:'4567',photo:'',blocked:false},{id:'sup14',name:'Azfar',role:'Electronic Eng',pin:'5678',photo:'',blocked:false}];
+var D_MACH=[{id:'EX-01',name:'Excavator CAT 320',plate:'EXEC-01',type:'TRC',status:'available',photo:''},{id:'EX-02',name:'Excavator Komatsu PC200',plate:'EXEC-02',type:'TRC',status:'available',photo:''},{id:'SH-01',name:'Shovel CAT 950H',plate:'SHVL-01',type:'TRC',status:'available',photo:''},{id:'CP-01',name:'Compactor Dynapac',plate:'COMP-01',type:'TRC',status:'available',photo:''},{id:'CP-02',name:'Plate Compactor',plate:'COMP-02',type:'TRC',status:'available',photo:''},{id:'TT-01',name:'Tipper Truck 10W',plate:'P-12345',type:'TRC',status:'available',photo:''},{id:'TT-02',name:'Tipper Truck 10W',plate:'P-12346',type:'TRC',status:'available',photo:''},{id:'TT-03',name:'Tipper Truck 6W',plate:'P-12347',type:'TRC',status:'available',photo:''},{id:'WT-01',name:'Water Tanker',plate:'P-67890',type:'TRC',status:'available',photo:''},{id:'GN-01',name:'Generator 50KVA',plate:'GEN-50',type:'TRC',status:'available',photo:''},{id:'GN-02',name:'Generator 20KVA',plate:'GEN-20',type:'TRC',status:'available',photo:''},{id:'CR-01',name:'Crane (Rental)',plate:'RENT-CR',type:'Rental',status:'available',photo:''},{id:'BB-01',name:'Bobcat (Rental)',plate:'RENT-BB',type:'Rental',status:'available',photo:''},{id:'RL-01',name:'Road Roller (Rental)',plate:'RENT-RL',type:'Rental',status:'available',photo:''}];
+var D_LAB=[{id:'L001',name:'Abdul Khaliq',designation:'Manager',category:'TRC',active:true,onLeave:false},{id:'L002',name:'Adil Khan',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L003',name:'Ahmad Nadeem',designation:'Mechanic',category:'RMJ',active:true,onLeave:false},{id:'L004',name:'Ahsan Ali Mirza',designation:'NOC Engineer',category:'TRC',active:true,onLeave:false},{id:'L005',name:'Ali Haider',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L006',name:'Ansar Mushtaq',designation:'Mason',category:'TRC',active:true,onLeave:false},{id:'L007',name:'Arshad Ali',designation:'Mason',category:'TRC',active:true,onLeave:false},{id:'L008',name:'Arslan Ijaz',designation:'Operator Shovel-950H',category:'RMJ',active:true,onLeave:false},{id:'L009',name:'Ashar Adnan',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L010',name:'Atif Khan',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L011',name:'Awais Jamil',designation:'Accountant',category:'TRC',active:true,onLeave:false},{id:'L012',name:'Azeem Ali',designation:'Site Incharge',category:'TRC',active:true,onLeave:false},{id:'L013',name:'Azhar Iqbal',designation:'Labour Cook',category:'TRC',active:true,onLeave:false},{id:'L014',name:'Bakht e Akbar',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L015',name:'Faisal Habib',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L016',name:'Faisal Hussain',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L017',name:'Faizal Khan',designation:'Electrician',category:'RMJ',active:true,onLeave:false},{id:'L018',name:'Fazal-E-Ameen',designation:'Draftsman',category:'TRC',active:true,onLeave:false},{id:'L019',name:'Ghulam Qadir',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L020',name:'Ghulam Raziq',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L021',name:'Ijaz Ahmed',designation:'Site Supervisor',category:'TRC',active:true,onLeave:false},{id:'L022',name:'Ilyas Hussain',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L023',name:'Iltaf Hussain',designation:'Mason',category:'TRC',active:true,onLeave:false},{id:'L024',name:'Imran Ali',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L025',name:'Imran Saleem',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L026',name:'Irfan Nasir',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L027',name:'Liaqat Ali',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L028',name:'Luqman Shahbaz',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L029',name:'Malik Noman Gul',designation:'Safety Officer',category:'RMJ',active:true,onLeave:false},{id:'L030',name:'MD Faruk',designation:'Mason',category:'Other Supply',active:true,onLeave:false},{id:'L031',name:'Mirza Altaf Baig',designation:'Surveyor',category:'TRC',active:true,onLeave:false},{id:'L032',name:'Mohsin Ali',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L033',name:'Mubarak Ullah',designation:'Surveyor',category:'TRC',active:true,onLeave:false},{id:'L034',name:'Mubashar Iqbal',designation:'Site Incharge',category:'TRC',active:true,onLeave:false},{id:'L035',name:'Mudasar Hussain',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L036',name:'Muhammad Idrees',designation:'Carpenter',category:'TRC',active:true,onLeave:false},{id:'L037',name:'Muhammad Ibrar',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L038',name:'Muhammad Islam',designation:'Mason',category:'RMJ',active:true,onLeave:false},{id:'L039',name:'Muhammad Junaid Awais',designation:'Mechanic',category:'TRC',active:true,onLeave:false},{id:'L040',name:'Muhammad Nadeem',designation:'Office Boy',category:'TRC',active:true,onLeave:false},{id:'L041',name:'Muhammad Nadeem Siddique',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L042',name:'Muhammad Pervaiz',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L043',name:'Muhammad Rasheed',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L044',name:'Muhammad Saleem',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L045',name:'Muhammad Shahbaz',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L046',name:'Muhammad Tariq',designation:'Project Manager',category:'TRC',active:true,onLeave:false},{id:'L047',name:'Mukhtar Ahmed',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L048',name:'Muneer Ahmed',designation:'HR/Admin',category:'TRC',active:true,onLeave:false},{id:'L049',name:'Mushtaq ur Rahman',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L050',name:'Nabi Ahmed',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L051',name:'Naveed Khan',designation:'Supervisor',category:'TRC',active:true,onLeave:false},{id:'L052',name:'Naveed Qadir',designation:'Surveyor',category:'TRC',active:true,onLeave:false},{id:'L053',name:'Nishadi Sandu',designation:'Quantity Surveyor',category:'TRC',active:true,onLeave:false},{id:'L054',name:'Noman Javed',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L055',name:'Noor Nawaz',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L056',name:'Pintu Kumar',designation:'Mason',category:'RMJ',active:true,onLeave:false},{id:'L057',name:'Pushvinder Singh',designation:'Operator',category:'RMJ',active:true,onLeave:false},{id:'L058',name:'Rafaqat Ali',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L059',name:'Raja Qaiser Hussain',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L060',name:'Ram Briksh',designation:'Steel Fixer',category:'RMJ',active:true,onLeave:false},{id:'L061',name:'Ram Manjhi',designation:'Mason',category:'RMJ',active:true,onLeave:false},{id:'L062',name:'Ravi Kumar',designation:'Mason',category:'Other Supply',active:true,onLeave:false},{id:'L063',name:'Rustam Malik',designation:'Site Supervisor',category:'TRC',active:true,onLeave:false},{id:'L064',name:'Saifullah',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L065',name:'Sajid Ali Siddique',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L066',name:'Shamas Iqbal',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L067',name:'Shahbaz Ali',designation:'Driver',category:'TRC',active:true,onLeave:false},{id:'L068',name:'Shahid Zaman',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L069',name:'Shaukat Ali',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L070',name:'Sufyan Qadri',designation:'Purchaser',category:'TRC',active:true,onLeave:false},{id:'L071',name:'Syed Azfar Abbas',designation:'Electronic Eng',category:'TRC',active:true,onLeave:false},{id:'L072',name:'Syed Habib Hussain Shah',designation:'Labor',category:'TRC',active:true,onLeave:false},{id:'L073',name:'Touseef Ali',designation:'Surveyor',category:'TRC',active:true,onLeave:false},{id:'L074',name:'Wadood Khan',designation:'Asst Draftsman',category:'RMJ',active:true,onLeave:false},{id:'L075',name:'Wajid Ullah',designation:'Site Engineer',category:'TRC',active:true,onLeave:false},{id:'L076',name:'Yasir Hussain Raja',designation:'Site Supervisor',category:'TRC',active:true,onLeave:false},{id:'L077',name:'Yasir Tariq',designation:'Operator',category:'TRC',active:true,onLeave:false},{id:'L078',name:'Muhammad Hussan',designation:'Labor',category:'Abdul Kaleem',active:true,onLeave:false},{id:'L079',name:'Muhammad Asif',designation:'Labor',category:'Abdul Kaleem',active:true,onLeave:false},{id:'L080',name:'Ali Humza',designation:'Labor',category:'Abdul Kaleem',active:true,onLeave:false},{id:'L081',name:'Negro Adams',designation:'Labor',category:'Abdul Kaleem',active:true,onLeave:false},{id:'L082',name:'Yasin Delelegn Asfaw',designation:'Labor',category:'Sowt Aljouda',active:true,onLeave:false},{id:'L083',name:'Seid Muhye Endris',designation:'Labor',category:'Sowt Aljouda',active:true,onLeave:false},{id:'L084',name:'Abdulhamid Seid Dawud',designation:'Labor',category:'SHS',active:true,onLeave:false},{id:'L085',name:'Younas Babo Lewute',designation:'Labor',category:'SHS',active:true,onLeave:false},{id:'L086',name:'Mengistu Atilaw Bahru',designation:'Labor',category:'Bilal Supply',active:true,onLeave:false},{id:'L087',name:'Bizuneh Morde Dese',designation:'Labor',category:'Bilal Supply',active:true,onLeave:false}];
+var D_PROJ=['656 PO#1013/4 - RTA Jogging Track Jumeirah','594 - Nakhli Reservoir Lehbab','690 - Maintenance of Dams & Water Structures - Western Region','635 - Crown Plaza Hotel - Entry & Exit RTA Parking','723 - DEWA rfx_2122500177 - Reinstatement of Tiles & Asphalt','670 - RFQ_217966 - Annual Contract for Leveling & Road Works','671 - RFQ_217965 - Road Maint Works Liwan Lake','710 - EV Charger Payment Works @ DTC Muhaisna','626 - MNG-R1098-1079 Supply Gunal 2024','Villa B87, C100, C98','Office','Yard','Camp'];
+var MATS=['Interlock 8cm','Upstand Kerbstone','Single Size Aggregate','Asphalt Removal','Road Base','Asphalt','Concrete (Ready Mix)','Sand','Sand 2XL','Six Wheel Trip','Water Tanker Trip','Steel Rebar','Cement Bags','Gravel','HDPE Pipe','GI Pipe','Tiles','Bricks','Formwork','Other'];
+var UNITS=['Sqm','LM','Trip','Ton','M3','Bag','Nos','Kg','m','Roll','Gal'];
+var CAT_LABELS={'TRC':'TRC','RMJ':'RMJ Building Contracting','Other Supply':'Other Supply','Abdul Kaleem':'Abdul Kaleem Ramy Labour','Sowt Aljouda':'Sowt Aljouda Trading','SHS':'S.H.S Company','Bilal Supply':'Muhammad Bilal Supply'};
+
+// ── GLOBAL STATE ──
+var sups=[], machs=[], lab=[], projs=[];
+var curSup=null, curProj=null, pinBuf='';
+var selMach={}, labSt={};
+var matCnt=0, todayDPRs={};
+var TODAY=new Date().toISOString().split('T')[0];
+
+// ── SCREEN NAVIGATION ──
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── LOADING ──
+function hideOverlay(){ document.getElementById('overlay').classList.add('hide'); }
+function showSaving(v){ document.getElementById('saving').classList.toggle('show',v); }
+
+// ── DATE ──
+document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// ── INIT: Load from Firestore ──
+function init(){
+  document.getElementById('ov-msg').textContent = 'Loading data…';
+
+  var p1 = db.collection('config').doc('supervisors').get();
+  var p2 = db.collection('config').doc('machines').get();
+  var p3 = db.collection('config').doc('labour').get();
+  var p4 = db.collection('config').doc('projects').get();
+
+  Promise.all([p1,p2,p3,p4]).then(function(results){
+    var supDoc=results[0], machDoc=results[1], labDoc=results[2], projDoc=results[3];
+
+    sups = supDoc.exists ? supDoc.data().list : D_SUPS;
+    machs = machDoc.exists ? machDoc.data().list : D_MACH;
+    lab = labDoc.exists ? labDoc.data().list : D_LAB;
+    projs = projDoc.exists ? projDoc.data().list : D_PROJ;
+
+    // Seed defaults if first time
+    if(!supDoc.exists) db.collection('config').doc('supervisors').set({list:D_SUPS});
+    if(!machDoc.exists) db.collection('config').doc('machines').set({list:D_MACH});
+    if(!labDoc.exists) db.collection('config').doc('labour').set({list:D_LAB});
+    if(!projDoc.exists) db.collection('config').doc('projects').set({list:D_PROJ});
+
+    // Listen for today's DPRs in real time
+    db.collection('dprs').where('date','==',TODAY).onSnapshot(function(snap){
+      todayDPRs = {};
+      snap.forEach(function(d){ var data=d.data(); todayDPRs[data.supId+'_'+data.project]=data; });
+      buildHome();
+      if(curSup && document.getElementById('s-dpr').classList.contains('active')) buildMachGrid();
+    });
+
+    hideOverlay();
+    buildHome();
+
+  }).catch(function(err){
+    document.getElementById('ov-msg').textContent = 'Connection failed: '+err.message;
+    document.getElementById('ov-msg').style.color = '#ef4444';
+    console.error(err);
+  });
+}
+init();
+
+// ── BUILD HOME ──
+function buildHome(){
+  var g = document.getElementById('sup-grid');
+  if(!sups.length){ g.innerHTML='<div class="empty">No supervisors found</div>'; return; }
+  g.innerHTML = sups.map(function(s){
+    var done = Object.values(todayDPRs).some(function(d){ return d.supId===s.id && d.locked; });
+    var ini = s.name.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+    var av = s.photo ? ('<img src="'+s.photo+'">') : ('<span>'+ini+'</span>');
+    return '<div class="sup-card'+(s.blocked?' blocked':'')+'" onclick="selSup(\''+s.id+'\')">'
+      +(done?'<div class="done-badge">✓ Done</div>':'')
+      +'<div class="sup-av">'+av+'</div>'
+      +'<div class="sup-nm">'+s.name+'</div>'
+      +'<div class="sup-rl">'+s.role+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── SELECT SUPERVISOR → PIN ──
+function selSup(id){
+  curSup = sups.find(function(s){ return s.id===id; });
+  if(!curSup){ alert('Supervisor not found'); return; }
+  pinBuf=''; updDots(0);
+  document.getElementById('pin-err').textContent='';
+  var ini = curSup.name.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+  document.getElementById('pin-av').innerHTML = curSup.photo ? ('<img src="'+curSup.photo+'">') : ('<span>'+ini+'</span>');
+  document.getElementById('pin-nm').textContent = curSup.name;
+  goTo('s-pin');
+}
+
+// ── PIN PAD ──
+function pinKey(k){
+  if(pinBuf.length>=4) return;
+  pinBuf += k;
+  updDots(pinBuf.length);
+  if(pinBuf.length===4) setTimeout(checkPin, 180);
+}
+function pinDel(){
+  if(pinBuf.length>0){ pinBuf=pinBuf.slice(0,-1); updDots(pinBuf.length); }
+}
+function updDots(n){
+  for(var i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('on', i<n);
+}
+function checkPin(){
+  if(pinBuf===curSup.pin){
+    document.getElementById('pin-err').textContent='';
+    buildProj();
+    goTo('s-project');
+  } else {
+    document.getElementById('pin-err').textContent='Wrong PIN — try again.';
+    pinBuf=''; updDots(0);
+  }
+}
+
+// ── PROJECT SELECTION ──
+function buildProj(){
+  document.getElementById('proj-supnm').textContent = curSup.name;
+  var recent = localStorage.getItem('recent_'+curSup.id);
+  var sorted = projs.slice().sort(function(a,b){ return a===recent?-1:b===recent?1:0; });
+  document.getElementById('proj-grid').innerHTML = sorted.map(function(p){
+    var enc = encodeURIComponent(p);
+    return '<div class="proj-card'+(p===recent?' recent':'')+'" onclick="selProj(\''+enc+'\')">'
+      +'<div class="proj-nm">'+p+'</div></div>';
+  }).join('');
+}
+function selProj(enc){
+  curProj = decodeURIComponent(enc);
+  localStorage.setItem('recent_'+curSup.id, curProj);
+  document.getElementById('dpr-nm').textContent = curSup.name;
+  document.getElementById('dpr-proj').textContent = curProj;
+  loadDPR();
+  goTo('s-dpr');
+}
+
+// ── LOAD DPR SCREEN ──
+function getDPRKey(){ return curSup.id+'_'+curProj+'_'+TODAY; }
+function getEx(){ return todayDPRs[curSup.id+'_'+curProj]||null; }
+
+function loadDPR(){
+  var ex = getEx();
+  var locked = ex && ex.locked;
+  document.getElementById('locked-box').style.display = locked ? 'block' : 'none';
+  var sb = document.getElementById('sub-btn');
+  sb.disabled = !!locked;
+  sb.textContent = locked ? '🔒 Submitted & Locked' : 'Submit & Lock DPR →';
+  selMach = ex ? JSON.parse(JSON.stringify(ex.machines||{})) : {};
+  labSt   = ex ? JSON.parse(JSON.stringify(ex.labour||{}))   : {};
+  buildMachGrid();
+  renderLabour();
+  buildMatRows(ex ? ex.materials||[] : []);
+  document.getElementById('remarks').value = ex ? ex.remarks||'' : '';
+  if(locked){
+    document.querySelectorAll('#s-dpr input,#s-dpr select,#s-dpr textarea').forEach(function(e){ e.disabled=true; });
+  }
+}
+
+// ── MACHINES ──
+function machIcon(n){
+  var l=n.toLowerCase();
+  if(l.indexOf('excavat')>=0||l.indexOf('shovel')>=0) return'🦾';
+  if(l.indexOf('truck')>=0||l.indexOf('tipper')>=0) return'🚛';
+  if(l.indexOf('compact')>=0) return'🔨';
+  if(l.indexOf('tanker')>=0||l.indexOf('water')>=0) return'🚰';
+  if(l.indexOf('generator')>=0) return'⚡';
+  if(l.indexOf('crane')>=0) return'🏗️';
+  if(l.indexOf('bobcat')>=0) return'🚜';
+  if(l.indexOf('roller')>=0) return'🛞';
+  return'⚙️';
+}
+function buildMachGrid(){
+  var takenByOthers={};
+  Object.values(todayDPRs).forEach(function(d){
+    if(d.supId!==curSup.id && d.machines){
+      Object.keys(d.machines).forEach(function(k){
+        if(d.machines[k].selected) takenByOthers[k]=true;
+      });
+    }
+  });
+  var sorted=machs.slice().sort(function(a,b){
+    var as=(selMach[a.id]&&selMach[a.id].selected)?-1:0;
+    var bs=(selMach[b.id]&&selMach[b.id].selected)?-1:0;
+    return as-bs;
+  });
+  var html='';
+  sorted.forEach(function(m){
+    var isTaken = takenByOthers[m.id] && !(selMach[m.id]&&selMach[m.id].selected);
+    var isBD    = m.status==='breakdown';
+    var isSB    = m.status==='standby';
+    var isSel   = !!(selMach[m.id]&&selMach[m.id].selected);
+    var fuel    = (selMach[m.id]&&selMach[m.id].fuel) ? selMach[m.id].fuel : '';
+    var cls='mc'; var badge='<span class="mc-badge b-grn">Available</span>';
+    if(isSel)  { cls+=' sel';       badge=''; }
+    else if(isBD)   { cls+=' breakdown'; badge='<span class="mc-badge b-red">Breakdown</span>'; }
+    else if(isSB)   { cls+=' standby';   badge='<span class="mc-badge b-yel">Standby</span>'; }
+    else if(isTaken){ cls+=' taken';     badge='<span class="mc-badge b-gry">Taken</span>'; }
+    var photo = m.photo ? '<img src="'+m.photo+'">' : machIcon(m.name);
+    html += '<div class="'+cls+'" id="mc-'+m.id+'" onclick="togMach(\''+m.id+'\')">'
+      +'<div class="mc-photo">'+photo+'</div>'
+      +'<div class="mc-nm">'+m.name+'</div>'
+      +'<div class="mc-pl">'+m.plate+'</div>'
+      +badge
+      +'<div class="fuel-row" onclick="event.stopPropagation()">'
+        +'<label>Fuel</label>'
+        +'<input class="fuel-inp" type="number" min="0" step="0.1" placeholder="0" value="'+fuel+'" onchange="setFuel(\''+m.id+'\',this.value)">'
+        +'<span class="fuel-unit">gal</span>'
+      +'</div>'
+      +'</div>';
+  });
+  document.getElementById('mach-grid').innerHTML = html;
+}
+function togMach(id){
+  var m=machs.find(function(x){return x.id===id;});
+  if(!m||m.status==='breakdown') return;
+  if(!selMach[id]) selMach[id]={selected:false,fuel:0};
+  selMach[id].selected = !selMach[id].selected;
+  buildMachGrid();
+}
+function setFuel(id,v){
+  if(!selMach[id]) selMach[id]={selected:false,fuel:0};
+  selMach[id].fuel=parseFloat(v)||0;
+}
+
+// ── LABOUR ──
+function renderLabour(){
+  var q = (document.getElementById('lab-srch')?document.getElementById('lab-srch').value:'').toLowerCase();
+  var defHrs = parseInt(document.getElementById('def-hrs')?document.getElementById('def-hrs').value:10)||10;
+  var cats=['TRC','RMJ','Other Supply','Abdul Kaleem','Sowt Aljouda','SHS','Bilal Supply'];
+  var html='';
+  cats.forEach(function(cat){
+    var people=lab.filter(function(p){return p.category===cat&&p.active;});
+    if(q) people=people.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0;});
+    if(!people.length) return;
+    people.sort(function(a,b){return a.name.localeCompare(b.name);});
+    html+='<div class="cat-lbl">'+(CAT_LABELS[cat]||cat)+'</div>';
+    people.forEach(function(p){
+      var st=labSt[p.id]||{};
+      var status=st.status||'';
+      var hrs=st.hours!==undefined?st.hours:defHrs;
+      var canLeave=curSup.id==='sup5';
+      var lvBadge=p.onLeave?'<span style="font-size:10px;background:#1e3a5f;color:#93c5fd;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px">On Leave</span>':'';
+      var hrsHtml=(status==='present'||status==='halfday')
+        ?'<div class="hrs-row"><span>Hrs:</span><input type="number" min="1" max="24" value="'+hrs+'" onchange="setLH(\''+p.id+'\',this.value)"></div>':'';
+      var lvHtml=status==='leave'
+        ?'<div class="lv-dates"><div class="lv-f"><span>Departure</span><input type="date" value="'+(st.leaveDate||'')+'" onchange="setLD(\''+p.id+'\',\'leaveDate\',this.value)"></div><div class="lv-f"><span>Return</span><input type="date" value="'+(st.returnDate||'')+'" onchange="setLD(\''+p.id+'\',\'returnDate\',this.value)"></div></div>':'';
+      var lvBtn=canLeave?'<button class="sbt'+(status==='leave'?' l':'')+'" onclick="setLS(\''+p.id+'\',\'leave\')">Leave PK</button>':'';
+      html+='<div class="lrow'+(status?' '+status:'')+'">'
+        +'<div style="flex:1;min-width:0"><div class="lnm">'+p.name+lvBadge+'</div><div class="lde">'+p.designation+' — '+cat+'</div></div>'
+        +'<div class="lrt">'
+          +'<div class="sbts">'
+            +'<button class="sbt'+(status==='present'?' p':'')+'" onclick="setLS(\''+p.id+'\',\'present\')">P</button>'
+            +'<button class="sbt'+(status==='absent'?' a':'')+'" onclick="setLS(\''+p.id+'\',\'absent\')">A</button>'
+            +'<button class="sbt'+(status==='halfday'?' h':'')+'" onclick="setLS(\''+p.id+'\',\'halfday\')">½</button>'
+            +lvBtn
+          +'</div>'
+          +hrsHtml+lvHtml
+        +'</div>'
+        +'</div>';
+    });
+  });
+  document.getElementById('lab-list').innerHTML = html||'<div class="empty">No results</div>';
+}
+function setLS(id,s){
+  if(!labSt[id]) labSt[id]={};
+  labSt[id].status = labSt[id].status===s ? '' : s;
+  if(s==='leave'){ var p=lab.find(function(x){return x.id===id;}); if(p) p.onLeave=true; }
+  renderLabour();
+}
+function setLH(id,v){ if(!labSt[id]) labSt[id]={}; labSt[id].hours=parseInt(v)||10; }
+function setLD(id,f,v){ if(!labSt[id]) labSt[id]={}; labSt[id][f]=v; }
+function applyDefHrs(){
+  var h=parseInt(document.getElementById('def-hrs').value)||10;
+  Object.keys(labSt).forEach(function(id){ if(labSt[id].status==='present') labSt[id].hours=h; });
+  renderLabour();
+}
+
+// ── MATERIALS ──
+function buildMatRows(existing){ document.getElementById('mat-rows').innerHTML=''; matCnt=0; existing.forEach(function(r){addMat(r);}); }
+function addMat(d){
+  matCnt++; var id='mr'+matCnt; d=d||{};
+  var div=document.createElement('div'); div.className='mat-row'; div.id=id;
+  div.innerHTML='<select class="mat-sel"><option value="">Material…</option>'
+    +MATS.map(function(m){return'<option'+(d.material===m?' selected':'')+'>'+m+'</option>';}).join('')+'</select>'
+    +'<input type="number" class="mat-num" placeholder="Qty" min="0" step="0.01" value="'+(d.qty||'')+'">'
+    +'<select class="mat-unit">'+UNITS.map(function(u){return'<option'+(d.unit===u?' selected':'')+'>'+u+'</option>';}).join('')+'</select>'
+    +'<input type="date" class="mat-dt" value="'+(d.date||TODAY)+'">'
+    +'<button class="mat-rm" onclick="document.getElementById(\''+id+'\').remove()">×</button>';
+  document.getElementById('mat-rows').appendChild(div);
+}
+
+// ── SUBMIT DPR TO FIRESTORE ──
+function submitDPR(){
+  var btn=document.getElementById('sub-btn');
+  btn.disabled=true; btn.textContent='Saving…'; showSaving(true);
+  var mats=[];
+  document.querySelectorAll('.mat-row').forEach(function(r){
+    var s=r.querySelector('.mat-sel'); var q=r.querySelector('.mat-num');
+    var u=r.querySelector('.mat-unit'); var dt=r.querySelector('.mat-dt');
+    if(s&&s.value&&q&&q.value) mats.push({material:s.value,qty:parseFloat(q.value),unit:u?u.value:'',date:dt?dt.value:TODAY});
+  });
+  var record={
+    supId:curSup.id, supName:curSup.name, project:curProj, date:TODAY,
+    machines:JSON.parse(JSON.stringify(selMach)),
+    labour:JSON.parse(JSON.stringify(labSt)),
+    materials:mats,
+    remarks:document.getElementById('remarks').value,
+    locked:true,
+    submittedAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+  db.collection('dprs').doc(getDPRKey()).set(record).then(function(){
+    showSaving(false);
+    // Update leave flags in config
+    var anyLeave=Object.values(labSt).some(function(st){return st.status==='leave';});
+    if(anyLeave){
+      Object.entries(labSt).forEach(function(e){
+        if(e[1].status==='leave'){ var p=lab.find(function(x){return x.id===e[0];}); if(p) p.onLeave=true; }
+      });
+      db.collection('config').doc('labour').set({list:lab});
+    }
+    alert('✅ DPR submitted successfully!');
+    loadDPR();
+  }).catch(function(e){
+    showSaving(false); btn.disabled=false; btn.textContent='Submit & Lock DPR →';
+    alert('❌ Failed to save: '+e.message);
+  });
+}
+
+// ── TAB SWITCH ──
+function swTab(t){
+  document.getElementById('tc-mach').style.display = t==='mach'?'block':'none';
+  document.getElementById('tc-lab').style.display  = t==='lab' ?'block':'none';
+  document.getElementById('tb-mach').classList.toggle('on', t==='mach');
+  document.getElementById('tb-lab').classList.toggle('on',  t==='lab');
+}
+</script>
+</body>
+</html>
